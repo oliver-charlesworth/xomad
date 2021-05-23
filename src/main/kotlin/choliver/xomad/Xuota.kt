@@ -1,28 +1,19 @@
 package choliver.xomad
 
 import io.ktor.application.*
-import io.ktor.features.*
+import io.ktor.http.HttpStatusCode.Companion.NotFound
 import io.ktor.response.*
 import io.ktor.routing.*
-import io.ktor.server.engine.*
-import io.ktor.server.netty.*
-import org.slf4j.event.Level
 
 object Xuota {
   @JvmStatic
-  fun main(args: Array<String>) {
-    val server = embeddedServer(Netty, port = 8080) {
-      install(CallLogging) {
-        level = Level.INFO
-      }
-
-      routing {
-        get("/") {
-          call.respondText("Hello world")
-        }
+  fun main(args: Array<String>) = startApp(name = javaClass.simpleName) {
+    get("/prices/{instrument}") {
+      when (val instrument = call.parameters["instrument"]) {
+        "BTC" -> call.respondText("33885.96")
+        "DOGE" -> call.respondText("0.29")
+        else -> call.respondText("Unsupported instrument: $instrument", status = NotFound)
       }
     }
-
-    server.start(wait = true)
   }
 }

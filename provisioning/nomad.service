@@ -4,7 +4,6 @@ Wants=network-online.target
 After=network-online.target
 
 [Service]
-
 ExecStart=/usr/bin/nomad agent -config /etc/nomad.d
 ExecReload=/bin/kill --signal HUP $MAINPID
 KillMode=process
