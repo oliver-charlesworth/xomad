@@ -1,5 +1,5 @@
 locals {
-  version = "0.0.5"
+  version = "0.0.8"
 }
 
 # TODO - log files
@@ -11,12 +11,16 @@ locals {
 # TODO - #core resources
 # TODO - host_volume for e.g. data dirs
 # TODO - service discovery for upstreams
-# TODO - Consul for managing "streams"
 # TODO - expose services (+ load-balancing?)
 job "xuota" {
   datacenters = ["los"]
 
   type = "service"
+
+  update {
+    stagger      = "10s"
+    max_parallel = 3
+  }
 
   group "app" {
     count = 6

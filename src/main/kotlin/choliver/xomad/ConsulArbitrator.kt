@@ -13,42 +13,37 @@ import kotlin.concurrent.thread
 
 @ExperimentalCoroutinesApi
 @ObsoleteCoroutinesApi
-object Consulation {
+class ConsulArbitrator(
+  private val address: Address
+) {
   private val logger = LoggerFactory.getLogger(javaClass)
 
   private val client = Consul.builder().build()
   private val sessionClient = client.sessionClient()
   private val kvClient = client.keyValueClient()
 
+  // TODO - this is gross
   private val mySessionId by lazy {
-    SessionId(sessionClient.createSession(ImmutableSession.builder()
-      .name("foo")
-      .build()
-    ).id).also {
+    SessionId(sessionClient.createSession(ImmutableSession.builder().ttl(SESSION_TTL).build()).id).also {
       logger.info("Created session: $it")
+      Runtime.getRuntime().addShutdownHook(thread(start = false) {
+        logger.info("Destroying session: $it")
+        sessionClient.destroySession(it.value)
+      })
     }
   }
 
   private var streams = mapOf<StreamId, SessionId?>()
 
-  @JvmStatic
-  fun main(args: Array<String>) {
-    val sessionRenewalTicker = ticker(20_000)
-    val streamGrabTicker = ticker(1_000)
-
-    Runtime.getRuntime().addShutdownHook(thread(start = false) {
-      logger.info("Destroying session: $mySessionId")
-      sessionClient.destroySession(mySessionId.value)
-    })
-
-    runBlocking {
-      val streamUpdates = watchForStreamUpdates()
-      while (true) {
-        select<Unit> {
-          sessionRenewalTicker.onReceive { renewSession() }
-          streamGrabTicker.onReceive { maybeGrabStreams() }
-          streamUpdates.onReceive { newStreams -> handleNewStreams(newStreams) }
-        }
+  fun CoroutineScope.start() = launch {
+    val sessionRenewalTicker = ticker(SESSION_RENEWAL_PERIOD_MILLIS)
+    val streamGrabTicker = ticker(STREAM_GRAB_PERIOD_MILLIS)
+    val streamUpdates = watchForStreamUpdates()
+    while (true) {
+      select<Unit> {
+        sessionRenewalTicker.onReceive { renewSession() }
+        streamGrabTicker.onReceive { maybeGrabStreams() }
+        streamUpdates.onReceive { newStreams -> handleNewStreams(newStreams) }
       }
     }
   }
@@ -57,12 +52,7 @@ object Consulation {
     var index = BigInteger.ZERO
     while (true) {
       val response = kvClient.io {
-        getConsulResponseWithValues(KEY_PREFIX,
-          ImmutableQueryOptions.builder()
-            .index(index)
-            .wait("5m")
-            .build()
-        )
+        getConsulResponseWithValues(KEY_PREFIX, ImmutableQueryOptions.builder().index(index).wait(QUERY_WAIT).build())
       }
 
       index = response.index
@@ -76,19 +66,21 @@ object Consulation {
   }
 
   private suspend fun renewSession() {
-    logger.info("Renewing session")
+    logger.info("Renewing session: $mySessionId")
     sessionClient.io { renewSession(mySessionId.value) }
   }
 
   private suspend fun maybeGrabStreams() {
     val myStreams = streams.filterValues { it == mySessionId }
     val unownedStreams = streams.filterValues { it == null }
-    val numToGrab = minOf(CAPACITY - myStreams.size, unownedStreams.size)
+    val numToGrab = minOf(CAPACITY - myStreams.size, unownedStreams.size, BATCH_SIZE)
     if (numToGrab > 0) {
-      val targets = unownedStreams.keys.shuffled().take(numToGrab)
+      val targets = unownedStreams.keys.shuffled().take(numToGrab)  // Randomise selection
       logger.info("Attempting to grab streams: $targets")
       kvClient.io {
-        targets.forEach { acquireLock("$KEY_PREFIX$it", mySessionId.value) }
+        targets.forEach {
+          acquireLock("$KEY_PREFIX$it", "${address.host}:${address.port}", mySessionId.value)
+        }
       }
     }
   }
@@ -99,14 +91,7 @@ object Consulation {
     (myNewStreams - myOldStreams).forEach { startProcessing(it) }
     (myOldStreams - myNewStreams).forEach { stopProcessing(it) }
     streams = newStreams
-    logStatus()
-  }
-
-  private fun logStatus() {
-    val mine = streams.filterValues { it == mySessionId }.keys.sorted()
-    val owned = streams.filterValues { it != mySessionId && it != null }.keys.sorted()
-    val unowned = streams.filterValues { it == null }.keys.sorted()
-    logger.info("Mine: $mine, Owned: $owned, Unowned: $unowned")
+    logger.info("Mine: $myNewStreams")
   }
 
   private fun startProcessing(id: StreamId) {
@@ -129,6 +114,13 @@ object Consulation {
     override fun toString() = value
   }
 
-  private const val CAPACITY = 6
-  private const val KEY_PREFIX = "xuota/streams/"
+  companion object {
+    private const val CAPACITY = 6
+    private const val BATCH_SIZE = 2
+    private const val SESSION_RENEWAL_PERIOD_MILLIS = 20_000L
+    private const val STREAM_GRAB_PERIOD_MILLIS = 1_000L
+    private const val SESSION_TTL = "30s"
+    private const val QUERY_WAIT = "5m"
+    private const val KEY_PREFIX = "xuota/streams/"
+  }
 }

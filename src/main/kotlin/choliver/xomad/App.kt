@@ -8,10 +8,12 @@ import io.ktor.response.*
 import io.ktor.routing.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
+import kotlinx.coroutines.CoroutineScope
 import org.slf4j.event.Level
 
 fun startApp(
   name: String,
+  onStart: CoroutineScope.(Address) -> Unit = {},
   configuration: Routing.() -> Unit
 ) {
   val address = getAddress()
@@ -20,6 +22,8 @@ fun startApp(
       level = Level.INFO
       filter { it.request.path() != HEALTHCHECK_PATH }
     }
+
+    onStart(address)
 
     routing {
       get("/") {
@@ -42,7 +46,6 @@ private fun getAddress() = System.getenv("NOMAD_ADDR_http")?.let {
   Address(parts[0], parts[1].toInt())
 } ?: DEFAULT_ADDRESS
 
-private data class Address(val host: String, val port: Int)
 
 private const val HEALTHCHECK_PATH = "/_healthz"
 private val DEFAULT_ADDRESS = Address("0.0.0.0", 8080)
