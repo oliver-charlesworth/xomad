@@ -17,20 +17,30 @@ done
 dnf config-manager --add-repo https://rpm.releases.hashicorp.com/fedora/hashicorp.repo
 dnf config-manager --add-repo https://adoptopenjdk.jfrog.io/adoptopenjdk/rpm/fedora/31/x86_64
 dnf install -y --nogpgcheck \
-  avahi nss-mdns \
+  unzip vim \
   adoptopenjdk-15-hotspot-jre \
+  consul \
   nomad
 
+# Configure Nomad
 cp ${SOURCE_DIR}/nomad.service /etc/systemd/system/
 cp ${SOURCE_DIR}/nomad.hcl /etc/nomad.d/
-cp ${SOURCE_DIR}/client.hcl /etc/nomad.d/
 if [[ "$server" == 1 ]]; then
-    cp ${SOURCE_DIR}/server.hcl /etc/nomad.d/
+    cp ${SOURCE_DIR}/nomad-server.hcl /etc/nomad.d/server.hcl
 fi
 
 systemctl enable nomad
 systemctl start nomad
 
-# Needed for DNS - maybe remove this and hardcode IPs
-systemctl enable avahi-daemon
-systemctl start avahi-daemon
+# Configure Consul
+cp ${SOURCE_DIR}/consul.service /etc/systemd/system/
+cp ${SOURCE_DIR}/consul.hcl /etc/consul.d/
+if [[ "$server" == 1 ]]; then
+    cp ${SOURCE_DIR}/consul-server.hcl /etc/consul.d/server.hcl
+fi
+chown consul: /etc/consul.d/*
+
+systemctl enable consul
+systemctl start consul
+
+

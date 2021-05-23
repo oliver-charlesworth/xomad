@@ -7,3 +7,9 @@ advertise {
   rpc  = "{{ GetInterfaceIP `eth1` }}"
   serf = "{{ GetInterfaceIP `eth1` }}"
 }
+
+client {
+  enabled = true
+  network_interface = "eth1"
+  servers = ["172.16.1.101"]
+}

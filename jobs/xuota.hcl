@@ -1,8 +1,12 @@
 job "xuota" {
   datacenters = ["los"]
 
+  type = "service"
+
   # TODO - sensible names for this hierarchy
   group "app" {
+    count = 3
+
     task "app" {
       driver = "java"
 
@@ -14,14 +18,16 @@ job "xuota" {
       config {
         class = "choliver.xomad.Xuota"
         # TODO - this is horrible
-        class_path = "local/xomad-0.0.2/xomad-0.0.2.jar"
+        class_path = "${NOMAD_TASK_DIR}/xomad-0.0.2/xomad-0.0.2.jar"
       }
 
-//      constraint {
-//        attribute = "${driver.java.version}"
-//        operator  = ">="
-//        value     = "15"
-//      }
+      resources {
+        cpu = 300
+        memory = 64
+      }
+
+      # TODO - healthcheck
+
     }
   }
 }
