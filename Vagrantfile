@@ -13,7 +13,7 @@ Vagrant.configure("2") do |config|
             host.vm.network :private_network, ip: "172.16.1.#{i + 100}"
 
             host.vm.provision :shell do |s|
-                s.path = "provision.sh"
+                s.path = "provisioning/provision.sh"
                 if i == 1
                     s.args = ["--server"]
                 end
