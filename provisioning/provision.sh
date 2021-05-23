@@ -15,7 +15,11 @@ for arg in "$@"; do
 done
 
 dnf config-manager --add-repo https://rpm.releases.hashicorp.com/fedora/hashicorp.repo
-dnf -y install avahi nss-mdns nomad
+dnf config-manager --add-repo https://adoptopenjdk.jfrog.io/adoptopenjdk/rpm/fedora/31/x86_64
+dnf install -y --nogpgcheck \
+  avahi nss-mdns \
+  adoptopenjdk-15-hotspot-jre \
+  nomad
 
 cp ${SOURCE_DIR}/nomad.service /etc/systemd/system/
 cp ${SOURCE_DIR}/nomad.hcl /etc/nomad.d/
