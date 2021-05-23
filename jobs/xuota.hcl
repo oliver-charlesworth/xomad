@@ -52,7 +52,7 @@ job "xuota" {
       }
 
       config {
-        class = "choliver.xomad.Xuota"
+        class = "choliver.xomad.xuota.Xuota"
         class_path = "${NOMAD_TASK_DIR}/xomad-${local.version}/xomad-${local.version}.jar"
       }
 

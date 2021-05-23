@@ -1,5 +1,6 @@
-package choliver.xomad
+package choliver.xomad.gateway
 
+import choliver.xomad.startApp
 import org.slf4j.LoggerFactory
 
 object Gateway {

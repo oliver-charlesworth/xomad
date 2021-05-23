@@ -1,5 +1,8 @@
-package choliver.xomad
+package choliver.xomad.xuota
 
+import choliver.xomad.Address
+import choliver.xomad.StreamId
+import choliver.xomad.xuota.ConsulArbitrator.Event.*
 import com.orbitz.consul.Consul
 import com.orbitz.consul.model.session.ImmutableSession
 import com.orbitz.consul.option.ImmutableQueryOptions
@@ -33,15 +36,30 @@ class ConsulArbitrator(
 
   private var streams = Streams()
 
-  fun CoroutineScope.start() = launch {
+  fun CoroutineScope.arbitrateStreams() = produce {
     val sessionRenewalTicker = ticker(SESSION_RENEWAL_PERIOD_MILLIS)
     val streamGrabTicker = ticker(STREAM_GRAB_PERIOD_MILLIS)
     val streamsUpdates = watchForStreamsUpdates()
+
     while (true) {
       select<Unit> {
-        sessionRenewalTicker.onReceive { renewSession() }
-        streamGrabTicker.onReceive { maybeGrabStreams() }
-        streamsUpdates.onReceive { update -> handleStreamsUpdate(update) }
+        sessionRenewalTicker.onReceive {
+          io { sessionClient.renewSession(mySessionId) }
+        }
+
+        streamGrabTicker.onReceive {
+          val numToGrab = minOf(CAPACITY - streams.mine.size, streams.unowned.size, BATCH_SIZE)
+          if (numToGrab > 0) {
+            val targets = streams.unowned.shuffled().take(numToGrab)  // Randomise selection
+            io { targets.forEach { kvClient.acquireLock("$KEY_PREFIX$it", "$address", mySessionId) } }
+          }
+        }
+
+        streamsUpdates.onReceive { update ->
+          (update.mine - streams.mine).forEach { send(StreamAcquired(it)) }
+          (streams.mine - update.mine).forEach { send(StreamDropped(it)) }
+          streams = update
+        }
       }
     }
   }
@@ -54,55 +72,28 @@ class ConsulArbitrator(
 
       response.response?.run {
         val asMap = associate { StreamId(it.key.removePrefix(KEY_PREFIX)) to (it.session.orElse(null)) }
-        send(Streams(
+        send(
+          Streams(
           mine = asMap.filterValues { it == mySessionId }.keys,
           unowned = asMap.filterValues { it == null }.keys,
-        ))
+        )
+        )
       }
       index = response.index
     }
   }
 
-  private suspend fun renewSession() {
-    logger.info("Renewing session: $mySessionId")
-    io { sessionClient.renewSession(mySessionId) }
-  }
-
-  private suspend fun maybeGrabStreams() {
-    val numToGrab = minOf(CAPACITY - streams.mine.size, streams.unowned.size, BATCH_SIZE)
-    if (numToGrab > 0) {
-      val targets = streams.unowned.shuffled().take(numToGrab)  // Randomise selection
-      logger.info("Attempting to grab streams: $targets")
-      io { targets.forEach { kvClient.acquireLock("$KEY_PREFIX$it", address.toString(), mySessionId) } }
-    }
-  }
-
-  private fun handleStreamsUpdate(update: Streams) {
-    logger.info("Mine: ${update.mine}")
-    (update.mine - streams.mine).forEach { startProcessing(it) }
-    (streams.mine - update.mine).forEach { stopProcessing(it) }
-    streams = update
-  }
-
-  private fun startProcessing(id: StreamId) {
-    logger.info("Started processing: $id")
-  }
-
-  private fun stopProcessing(id: StreamId) {
-    logger.info("Stopped processing: $id")
-  }
-
   private suspend fun <R> io(block: () -> R) = withContext(Dispatchers.IO) { block() }
-
-  private data class StreamId(val value: String) : Comparable<StreamId> {
-    override fun compareTo(other: StreamId) = value.compareTo(other.value)
-    override fun toString() = value
-  }
 
   private data class Streams(
     val mine: Set<StreamId> = emptySet(),
     val unowned: Set<StreamId> = emptySet(),
   )
+
+  sealed class Event {
+    data class StreamAcquired(val id: StreamId) : Event()
+    data class StreamDropped(val id: StreamId) : Event()
+  }
 
   companion object {
     private const val CAPACITY = 6
