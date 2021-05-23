@@ -11,8 +11,6 @@ import org.slf4j.LoggerFactory
 import java.math.BigInteger
 import kotlin.concurrent.thread
 
-@ExperimentalCoroutinesApi
-@ObsoleteCoroutinesApi
 class ConsulArbitrator(
   private val address: Address
 ) {
@@ -24,74 +22,66 @@ class ConsulArbitrator(
 
   // TODO - this is gross
   private val mySessionId by lazy {
-    SessionId(sessionClient.createSession(ImmutableSession.builder().ttl(SESSION_TTL).build()).id).also {
+    sessionClient.createSession(ImmutableSession.builder().ttl(SESSION_TTL).build()).id.also {
       logger.info("Created session: $it")
       Runtime.getRuntime().addShutdownHook(thread(start = false) {
         logger.info("Destroying session: $it")
-        sessionClient.destroySession(it.value)
+        sessionClient.destroySession(it)
       })
     }
   }
 
-  private var streams = mapOf<StreamId, SessionId?>()
+  private var streams = Streams()
 
   fun CoroutineScope.start() = launch {
     val sessionRenewalTicker = ticker(SESSION_RENEWAL_PERIOD_MILLIS)
     val streamGrabTicker = ticker(STREAM_GRAB_PERIOD_MILLIS)
-    val streamUpdates = watchForStreamUpdates()
+    val streamsUpdates = watchForStreamsUpdates()
     while (true) {
       select<Unit> {
         sessionRenewalTicker.onReceive { renewSession() }
         streamGrabTicker.onReceive { maybeGrabStreams() }
-        streamUpdates.onReceive { newStreams -> handleNewStreams(newStreams) }
+        streamsUpdates.onReceive { update -> handleStreamsUpdate(update) }
       }
     }
   }
 
-  private fun CoroutineScope.watchForStreamUpdates() = produce<Map<StreamId, SessionId?>> {
+  private fun CoroutineScope.watchForStreamsUpdates() = produce {
     var index = BigInteger.ZERO
     while (true) {
-      val response = kvClient.io {
-        getConsulResponseWithValues(KEY_PREFIX, ImmutableQueryOptions.builder().index(index).wait(QUERY_WAIT).build())
-      }
+      val options = ImmutableQueryOptions.builder().index(index).wait(QUERY_WAIT).build()
+      val response = io { kvClient.getConsulResponseWithValues(KEY_PREFIX, options) }
 
+      response.response?.run {
+        val asMap = associate { StreamId(it.key.removePrefix(KEY_PREFIX)) to (it.session.orElse(null)) }
+        send(Streams(
+          mine = asMap.filterValues { it == mySessionId }.keys,
+          unowned = asMap.filterValues { it == null }.keys,
+        ))
+      }
       index = response.index
-
-      if (response.response != null) {
-        send(response.response.associate {
-          StreamId(it.key.removePrefix(KEY_PREFIX)) to (it.session.map(::SessionId).orElse(null))
-        })
-      }
     }
   }
 
   private suspend fun renewSession() {
     logger.info("Renewing session: $mySessionId")
-    sessionClient.io { renewSession(mySessionId.value) }
+    io { sessionClient.renewSession(mySessionId) }
   }
 
   private suspend fun maybeGrabStreams() {
-    val myStreams = streams.filterValues { it == mySessionId }
-    val unownedStreams = streams.filterValues { it == null }
-    val numToGrab = minOf(CAPACITY - myStreams.size, unownedStreams.size, BATCH_SIZE)
+    val numToGrab = minOf(CAPACITY - streams.mine.size, streams.unowned.size, BATCH_SIZE)
     if (numToGrab > 0) {
-      val targets = unownedStreams.keys.shuffled().take(numToGrab)  // Randomise selection
+      val targets = streams.unowned.shuffled().take(numToGrab)  // Randomise selection
       logger.info("Attempting to grab streams: $targets")
-      kvClient.io {
-        targets.forEach {
-          acquireLock("$KEY_PREFIX$it", "${address.host}:${address.port}", mySessionId.value)
-        }
-      }
+      io { targets.forEach { kvClient.acquireLock("$KEY_PREFIX$it", address.toString(), mySessionId) } }
     }
   }
 
-  private fun handleNewStreams(newStreams: Map<StreamId, SessionId?>) {
-    val myOldStreams = streams.filterValues { it == mySessionId }.keys
-    val myNewStreams = newStreams.filterValues { it == mySessionId }.keys
-    (myNewStreams - myOldStreams).forEach { startProcessing(it) }
-    (myOldStreams - myNewStreams).forEach { stopProcessing(it) }
-    streams = newStreams
-    logger.info("Mine: $myNewStreams")
+  private fun handleStreamsUpdate(update: Streams) {
+    logger.info("Mine: ${update.mine}")
+    (update.mine - streams.mine).forEach { startProcessing(it) }
+    (streams.mine - update.mine).forEach { stopProcessing(it) }
+    streams = update
   }
 
   private fun startProcessing(id: StreamId) {
@@ -102,17 +92,17 @@ class ConsulArbitrator(
     logger.info("Stopped processing: $id")
   }
 
-  private suspend fun <T, R> T.io(block: T.() -> R) = withContext(Dispatchers.IO) { block() }
+  private suspend fun <R> io(block: () -> R) = withContext(Dispatchers.IO) { block() }
 
   private data class StreamId(val value: String) : Comparable<StreamId> {
     override fun compareTo(other: StreamId) = value.compareTo(other.value)
     override fun toString() = value
   }
 
-  private data class SessionId(val value: String) : Comparable<SessionId> {
-    override fun compareTo(other: SessionId) = value.compareTo(other.value)
-    override fun toString() = value
-  }
+  private data class Streams(
+    val mine: Set<StreamId> = emptySet(),
+    val unowned: Set<StreamId> = emptySet(),
+  )
 
   companion object {
     private const val CAPACITY = 6

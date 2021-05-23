@@ -12,6 +12,7 @@ locals {
 # TODO - host_volume for e.g. data dirs
 # TODO - service discovery for upstreams
 # TODO - expose services (+ load-balancing?)
+# TODO - low-friction dev deploys
 job "xuota" {
   datacenters = ["los"]
 

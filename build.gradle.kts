@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
   kotlin("jvm") version "1.5.0"
   `java-library-distribution`
@@ -20,5 +22,14 @@ dependencies {
 tasks.jar {
   manifest {
     attributes["Class-Path"] = configurations.runtimeClasspath.get().joinToString(" ") { "lib/" + it.name }
+  }
+}
+
+tasks.withType<KotlinCompile>().configureEach {
+  kotlinOptions {
+    freeCompilerArgs = listOf(
+      "-Xopt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
+      "-Xopt-in=kotlinx.coroutines.ObsoleteCoroutinesApi"
+    )
   }
 }

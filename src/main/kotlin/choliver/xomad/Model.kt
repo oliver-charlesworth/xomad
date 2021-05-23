@@ -1,3 +1,5 @@
 package choliver.xomad
 
-data class Address(val host: String, val port: Int)
+data class Address(val host: String, val port: Int) {
+  override fun toString() = "${host}:${port}"
+}
