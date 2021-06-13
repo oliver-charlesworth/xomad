@@ -2,17 +2,6 @@ locals {
   version = "0.0.13"
 }
 
-# TODO - log files
-# TODO - readiness check
-# TODO - check_restart + restart policy
-# TODO - migrate / reschedule policies
-# TODO - outbound TLS sidecar (stunnel replacement)
-# TODO - multiple datacenters
-# TODO - #core resources
-# TODO - host_volume for e.g. data dirs
-# TODO - service discovery for upstreams
-# TODO - expose services (+ load-balancing?)
-# TODO - low-friction dev deploys
 job "quoter" {
   datacenters = ["los"]
 
