@@ -14,7 +14,7 @@ import org.slf4j.event.Level
 fun startApp(
   name: String,
   onStart: CoroutineScope.(Address) -> Unit = {},
-  configuration: Routing.() -> Unit
+  configuration: Route.() -> Unit
 ) {
   val address = getAddress()
   val server = embeddedServer(Netty, host = address.host, port = address.port) {
@@ -22,17 +22,22 @@ fun startApp(
       level = Level.INFO
       filter { it.request.path() != HEALTHCHECK_PATH }
     }
+    install(IgnoreTrailingSlash)
 
     onStart(address)
 
     routing {
-      get("/") { call.respondText("Hello from $name") }
       get(HEALTHCHECK_PATH) { call.respond(OK) }
-      configuration()
+      route(getBaseRoute()) {
+        get("/") { call.respondText("Hello from $name") }
+        configuration()
+      }
     }
   }
   server.start(wait = true)
 }
+
+fun getBaseRoute() = System.getenv("BASE_ROUTE") ?: "/"
 
 fun getAddress() = System.getenv("NOMAD_ADDR_http")?.let {
   val parts = it.split(":")

@@ -1,4 +1,5 @@
 data_dir = "/opt/nomad/data"
+# TODO - fix the the address we bind to (initially comes up as 127.0.0.1 on all clients)
 bind_addr = "0.0.0.0"
 datacenter = "los"
 

@@ -1,33 +1,17 @@
 locals {
-  version = "0.0.9"
+  version = "0.0.12"
 }
 
-# TODO - log files
-# TODO - readiness check
-# TODO - check_restart + restart policy
-# TODO - migrate / reschedule policies
-# TODO - outbound TLS sidecar (stunnel replacement)
-# TODO - multiple datacenters
-# TODO - #core resources
-# TODO - host_volume for e.g. data dirs
-# TODO - service discovery for upstreams
-# TODO - expose services (+ load-balancing?)
-# TODO - low-friction dev deploys
-job "xuota" {
+job "mygrid" {
   datacenters = ["los"]
 
   type = "service"
 
-  update {
-    stagger      = "10s"
-    max_parallel = 3
-  }
-
   group "app" {
-    count = 6
+    count = 1
 
     service {
-      name = "xuota"
+      name = "mygrid"
       port = "http"
 
       check {
@@ -37,6 +21,10 @@ job "xuota" {
         interval = "10s"
         timeout = "5s"
       }
+
+      tags = [
+        "traefik.enable=true",
+      ]
     }
 
     network {
@@ -52,8 +40,12 @@ job "xuota" {
       }
 
       config {
-        class = "choliver.xomad.xuota.Xuota"
+        class = "choliver.xomad.mygrid.MyGrid"
         class_path = "${NOMAD_TASK_DIR}/xomad-${local.version}/xomad-${local.version}.jar"
+      }
+
+      env {
+        BASE_ROUTE = "mygrid"
       }
 
       resources {

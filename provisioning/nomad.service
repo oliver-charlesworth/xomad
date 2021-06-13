@@ -9,6 +9,7 @@ ExecReload=/bin/kill --signal HUP $MAINPID
 KillMode=process
 KillSignal=SIGINT
 Restart=on-failure
+RestartSec=10
 TasksMax=infinity
 LimitNOFILE=infinity
 LimitNPROC=infinity

@@ -5,7 +5,7 @@ plugins {
   `java-library-distribution`
 }
 
-version = "0.0.8"
+version = "0.0.12"
 
 repositories {
   mavenCentral()
@@ -13,7 +13,7 @@ repositories {
 
 dependencies {
   implementation(kotlin("stdlib-jdk8"))
-  implementation("io.ktor:ktor-server-netty:1.5.4")
+  implementation("io.ktor:ktor-server-netty:1.6.0")
   implementation("com.orbitz.consul:consul-client:1.5.1")
   implementation("org.slf4j:slf4j-api:1.7.30")
   runtimeOnly("ch.qos.logback:logback-classic:1.2.3")

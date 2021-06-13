@@ -19,8 +19,14 @@ Vagrant.configure("2") do |config|
             end
 
             if i == 1
+                # Nomad dashboard
                 host.vm.network :forwarded_port, guest: 4646, host: 4646, auto_correct: true, host_ip: "127.0.0.1"
+                # Consul dashboard
                 host.vm.network :forwarded_port, guest: 8500, host: 8500, auto_correct: true, host_ip: "127.0.0.1"
+                # Traefik dashboard
+                host.vm.network :forwarded_port, guest: 8081, host: 8081, auto_correct: true, host_ip: "127.0.0.1"
+                # Traefik main
+                host.vm.network :forwarded_port, guest: 8080, host: 8080, auto_correct: true, host_ip: "127.0.0.1"
             end
         end
     end
