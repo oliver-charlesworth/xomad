@@ -1,4 +1,4 @@
-package choliver.xomad.xuota
+package choliver.xomad.quoter
 
 import choliver.xomad.Address
 import choliver.xomad.StreamId

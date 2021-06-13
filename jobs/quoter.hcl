@@ -1,5 +1,5 @@
 locals {
-  version = "0.0.9"
+  version = "0.0.13"
 }
 
 # TODO - log files
@@ -13,7 +13,7 @@ locals {
 # TODO - service discovery for upstreams
 # TODO - expose services (+ load-balancing?)
 # TODO - low-friction dev deploys
-job "xuota" {
+job "quoter" {
   datacenters = ["los"]
 
   type = "service"
@@ -27,7 +27,7 @@ job "xuota" {
     count = 6
 
     service {
-      name = "xuota"
+      name = "quoter"
       port = "http"
 
       check {
@@ -52,7 +52,7 @@ job "xuota" {
       }
 
       config {
-        class = "choliver.xomad.xuota.Xuota"
+        class = "choliver.xomad.quoter.Quoter"
         class_path = "${NOMAD_TASK_DIR}/xomad-${local.version}/xomad-${local.version}.jar"
       }
 

@@ -1,4 +1,4 @@
-package choliver.xomad.xuota
+package choliver.xomad.quoter
 
 import choliver.xomad.HEALTHCHECK_PATH
 import choliver.xomad.StreamId
@@ -14,7 +14,7 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import org.slf4j.event.Level
 
-object Xuota {
+object Quoter {
   @JvmStatic
   fun main(args: Array<String>) {
     val address = getAddress()

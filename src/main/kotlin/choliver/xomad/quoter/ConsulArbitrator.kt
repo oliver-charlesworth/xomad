@@ -1,8 +1,8 @@
-package choliver.xomad.xuota
+package choliver.xomad.quoter
 
 import choliver.xomad.Address
 import choliver.xomad.StreamId
-import choliver.xomad.xuota.ConsulArbitrator.Event.*
+import choliver.xomad.quoter.ConsulArbitrator.Event.*
 import com.orbitz.consul.Consul
 import com.orbitz.consul.model.session.ImmutableSession
 import com.orbitz.consul.option.ImmutableQueryOptions
@@ -100,6 +100,6 @@ class ConsulArbitrator(
     private const val STREAM_GRAB_PERIOD_MILLIS = 1_000L
     private const val SESSION_TTL = "30s"
     private const val QUERY_WAIT = "5m"
-    private const val KEY_PREFIX = "xuota/streams/"
+    private const val KEY_PREFIX = "quoter/streams/"
   }
 }

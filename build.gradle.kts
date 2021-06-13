@@ -5,7 +5,7 @@ plugins {
   `java-library-distribution`
 }
 
-version = "0.0.12"
+version = "0.0.13"
 
 repositories {
   mavenCentral()
