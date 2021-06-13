@@ -1,60 +1,45 @@
 package choliver.xomad.xuota
 
-import choliver.xomad.Address
+import choliver.xomad.HEALTHCHECK_PATH
 import choliver.xomad.StreamId
-import choliver.xomad.startApp
-import choliver.xomad.xuota.ConsulArbitrator.Event.StreamAcquired
-import choliver.xomad.xuota.ConsulArbitrator.Event.StreamDropped
+import choliver.xomad.getAddress
 import io.ktor.application.*
+import io.ktor.features.*
 import io.ktor.http.HttpStatusCode.Companion.NotFound
+import io.ktor.http.HttpStatusCode.Companion.OK
+import io.ktor.request.*
 import io.ktor.response.*
 import io.ktor.routing.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.selects.select
-import org.slf4j.LoggerFactory
+import io.ktor.server.engine.*
+import io.ktor.server.netty.*
+import org.slf4j.event.Level
 
 object Xuota {
-  private val logger = LoggerFactory.getLogger(javaClass)
-
-  // TODO - wire up call handler to state somehow
-
   @JvmStatic
   fun main(args: Array<String>) {
-    startApp(
-      name = javaClass.simpleName,
-      onStart = { handleStreams(it) }
-    ) {
-      get("/prices/{instrument}") {
-        when (val instrument = call.parameters["instrument"]) {
-          "BTC" -> call.respondText("33885.96")
-          "DOGE" -> call.respondText("0.29")
-          else -> call.respondText("Unsupported instrument: $instrument", status = NotFound)
-        }
+    val address = getAddress()
+    val server = embeddedServer(Netty, host = address.host, port = address.port) {
+      install(CallLogging) {
+        level = Level.INFO
+        filter { it.request.path() != HEALTHCHECK_PATH }
       }
-    }
-  }
 
-  private fun CoroutineScope.handleStreams(address: Address) = launch {
-    val streams = mutableSetOf<StreamId>()
+      val pricer = MultiPricer(address).apply { start() }
 
-    val events = with(ConsulArbitrator(address)) { arbitrateStreams() }
+      routing {
+        get("/") { call.respondText("Hello from ${javaClass.simpleName}") }
 
-    while (true) {
-      select<Unit> {
-        events.onReceive { e ->
-          when (e) {
-            is StreamAcquired -> {
-              logger.info("Stream acquired: ${e.id}")
-              streams += e.id
-            }
-            is StreamDropped -> {
-              logger.info("Stream dropped: ${e.id}")
-              streams -= e.id
-            }
+        get(HEALTHCHECK_PATH) { call.respond(OK) }
+
+        get("/prices/{stream}") {
+          val streamId = StreamId(call.parameters["stream"]!!)
+          when (val result = pricer.getPrice(streamId)) {
+            null -> call.respondText("Unsupported stream: $streamId", status = NotFound)
+            else -> call.respondText(result)
           }
         }
       }
     }
+    server.start(wait = true)
   }
 }

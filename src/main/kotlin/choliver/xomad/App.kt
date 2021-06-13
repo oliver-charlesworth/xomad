@@ -26,29 +26,23 @@ fun startApp(
     onStart(address)
 
     routing {
-      get("/") {
-        call.respondText("Hello from $name")
-      }
-
-      get(HEALTHCHECK_PATH) {
-        call.respond(OK)
-      }
-
+      get("/") { call.respondText("Hello from $name") }
+      get(HEALTHCHECK_PATH) { call.respond(OK) }
       configuration()
     }
   }
   server.start(wait = true)
 }
 
-private fun getAddress() = System.getenv("NOMAD_ADDR_http")?.let {
+fun getAddress() = System.getenv("NOMAD_ADDR_http")?.let {
   val parts = it.split(":")
   require(parts.size == 2) { "Invalid address: $it" }
   Address(parts[0], parts[1].toInt())
 } ?: DEFAULT_ADDRESS
 
 
-private const val HEALTHCHECK_PATH = "/_healthz"
-private val DEFAULT_ADDRESS = Address("0.0.0.0", 8080)
+const val HEALTHCHECK_PATH = "/_healthz"
+val DEFAULT_ADDRESS = Address("0.0.0.0", 8080)
 
 
 

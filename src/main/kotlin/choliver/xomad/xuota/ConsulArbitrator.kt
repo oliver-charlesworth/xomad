@@ -71,13 +71,11 @@ class ConsulArbitrator(
       val response = io { kvClient.getConsulResponseWithValues(KEY_PREFIX, options) }
 
       response.response?.run {
-        val asMap = associate { StreamId(it.key.removePrefix(KEY_PREFIX)) to (it.session.orElse(null)) }
-        send(
-          Streams(
+        val asMap = associate { StreamId(it.key.removePrefix(KEY_PREFIX)) to it.session.orElse(null) }
+        send(Streams(
           mine = asMap.filterValues { it == mySessionId }.keys,
           unowned = asMap.filterValues { it == null }.keys,
-        )
-        )
+        ))
       }
       index = response.index
     }
