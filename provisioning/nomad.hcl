@@ -1,12 +1,11 @@
 data_dir = "/opt/nomad/data"
-# TODO - fix the the address we bind to (initially comes up as 127.0.0.1 on all clients)
 bind_addr = "0.0.0.0"
 datacenter = "los"
 
 advertise {
-  http = "{{ GetInterfaceIP `eth1` }}"
-  rpc  = "{{ GetInterfaceIP `eth1` }}"
-  serf = "{{ GetInterfaceIP `eth1` }}"
+  http = "PRIVATE_IP"
+  rpc  = "PRIVATE_IP"
+  serf = "PRIVATE_IP"
 }
 
 client {

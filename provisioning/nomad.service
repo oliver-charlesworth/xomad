@@ -1,6 +1,6 @@
 [Unit]
 Description=Nomad
-Wants=network-online.target
+Requires=network-online.target
 After=network-online.target
 
 [Service]

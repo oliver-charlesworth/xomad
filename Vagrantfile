@@ -6,15 +6,18 @@ Vagrant.configure("2") do |config|
 
     (1..3).each do |i|
         name = "los-#{i}"
+        ip = "172.16.1.#{i + 100}"
 
         config.vm.define name do |host|
             host.vm.hostname = name
-            host.vm.network :private_network, ip: "172.16.1.#{i + 100}"
+            host.vm.network :private_network, ip: ip
 
             host.vm.provision :shell do |s|
                 s.path = "provisioning/provision.sh"
                 if i == 1
-                    s.args = ["--server"]
+                    s.args = ["--server", ip]
+                else
+                    s.args = [ip]
                 end
             end
 

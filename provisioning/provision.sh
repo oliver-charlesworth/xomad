@@ -10,6 +10,7 @@ for arg in "$@"; do
             server=1
             ;;
         *)
+            private_ip=$arg
             ;;
     esac
 done
@@ -24,7 +25,7 @@ dnf install -y --nogpgcheck \
 
 # Configure Nomad
 cp ${SOURCE_DIR}/nomad.service /etc/systemd/system/
-cp ${SOURCE_DIR}/nomad.hcl /etc/nomad.d/
+sed "s/PRIVATE_IP/${private_ip}/g" ${SOURCE_DIR}/nomad.hcl > /etc/nomad.d/nomad.hcl
 if [[ "$server" == 1 ]]; then
     cp ${SOURCE_DIR}/nomad-server.hcl /etc/nomad.d/server.hcl
 fi
@@ -34,7 +35,7 @@ systemctl start nomad
 
 # Configure Consul
 cp ${SOURCE_DIR}/consul.service /etc/systemd/system/
-cp ${SOURCE_DIR}/consul.hcl /etc/consul.d/
+sed "s/PRIVATE_IP/${private_ip}/g" ${SOURCE_DIR}/consul.hcl > /etc/consul.d/consul.hcl
 if [[ "$server" == 1 ]]; then
     cp ${SOURCE_DIR}/consul-server.hcl /etc/consul.d/server.hcl
 fi
