@@ -1,5 +1,5 @@
 locals {
-  version = "0.0.17"
+  version = "0.0.20"
 }
 
 job "grid-dummy" {

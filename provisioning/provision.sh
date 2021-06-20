@@ -30,7 +30,7 @@ dnf install -y --nogpgcheck \
 
 echo "--------- Configure Nomad ---------"
 
-envsubst < ${SOURCE_DIR}/nomad.service > /etc/systemd/system/
+envsubst < ${SOURCE_DIR}/nomad.service > /etc/systemd/system/nomad.service
 envsubst < ${SOURCE_DIR}/nomad.hcl > /etc/nomad.d/nomad.hcl
 if [[ "$server" == 1 ]]; then
   envsubst < ${SOURCE_DIR}/nomad-server.hcl > /etc/nomad.d/server.hcl
@@ -42,7 +42,7 @@ systemctl start nomad
 
 echo "--------- Configure Consul ---------"
 
-envsubst < ${SOURCE_DIR}/consul.service > /etc/systemd/system/
+envsubst < ${SOURCE_DIR}/consul.service > /etc/systemd/system/consul.service
 envsubst < ${SOURCE_DIR}/consul.hcl > /etc/consul.d/consul.hcl
 if [[ "$server" == 1 ]]; then
   envsubst < ${SOURCE_DIR}/consul-server.hcl > /etc/consul.d/server.hcl
