@@ -27,7 +27,7 @@ object Quoter {
       val pricer = MultiPricer(address).apply { start() }
 
       routing {
-        get("/") { call.respondText("Hello from ${javaClass.simpleName}") }
+        get("/") { call.respondText("Hello from ${this@Quoter.javaClass.simpleName}") }
 
         get(HEALTHCHECK_PATH) { call.respond(OK) }
 

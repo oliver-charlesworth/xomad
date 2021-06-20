@@ -30,7 +30,7 @@ object DummyGrid {
         get(HEALTHCHECK_PATH) { call.respond(HttpStatusCode.OK) }
 
         route(getBaseRoute()) {
-          get("/") { call.respondText("Hello from ${javaClass.simpleName}") }
+          get("/") { call.respondText("Hello from ${this@DummyGrid.javaClass.simpleName}") }
         }
       }
     }
