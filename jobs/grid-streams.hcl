@@ -2,21 +2,16 @@ locals {
   version = "0.0.18"
 }
 
-job "quoter" {
+job "grid-streams" {
   datacenters = ["los"]
 
   type = "service"
 
-  update {
-    stagger      = "10s"
-    max_parallel = 3
-  }
-
   group "app" {
-    count = 6
+    count = 1
 
     service {
-      name = "quoter"
+      name = "grid-streams"
       port = "http"
 
       check {
@@ -26,6 +21,10 @@ job "quoter" {
         interval = "10s"
         timeout = "5s"
       }
+
+      tags = [
+        "traefik.enable=true",
+      ]
     }
 
     network {
@@ -41,8 +40,12 @@ job "quoter" {
       }
 
       config {
-        class = "choliver.xomad.quoter.Quoter"
+        class = "choliver.xomad.grid.streams.StreamsGrid"
         class_path = "${NOMAD_TASK_DIR}/xomad-${local.version}/xomad-${local.version}.jar"
+      }
+
+      env {
+        BASE_ROUTE = "grid-streams"
       }
 
       resources {

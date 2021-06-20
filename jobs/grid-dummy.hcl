@@ -1,8 +1,8 @@
 locals {
-  version = "0.0.12"
+  version = "0.0.17"
 }
 
-job "mygrid" {
+job "grid-dummy" {
   datacenters = ["los"]
 
   type = "service"
@@ -11,7 +11,7 @@ job "mygrid" {
     count = 1
 
     service {
-      name = "mygrid"
+      name = "grid-dummy"
       port = "http"
 
       check {
@@ -40,12 +40,12 @@ job "mygrid" {
       }
 
       config {
-        class = "choliver.xomad.mygrid.MyGrid"
+        class = "choliver.xomad.grid.dummy.DummyGrid"
         class_path = "${NOMAD_TASK_DIR}/xomad-${local.version}/xomad-${local.version}.jar"
       }
 
       env {
-        BASE_ROUTE = "mygrid"
+        BASE_ROUTE = "grid-dummy"
       }
 
       resources {
