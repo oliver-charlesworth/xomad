@@ -1,5 +1,5 @@
 locals {
-  version = "0.0.20"
+  version = "0.0.21"
 }
 
 job "grid-hello" {
@@ -40,7 +40,7 @@ job "grid-hello" {
       }
 
       config {
-        class = "choliver.xomad.grid.dummy.DummyGrid"
+        class = "choliver.xomad.grid.hello.HelloGrid"
         class_path = "${NOMAD_TASK_DIR}/xomad-${local.version}/xomad-${local.version}.jar"
       }
 

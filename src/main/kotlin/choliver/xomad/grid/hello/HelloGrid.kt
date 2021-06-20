@@ -1,4 +1,4 @@
-package choliver.xomad.grid.dummy
+package choliver.xomad.grid.hello
 
 import choliver.xomad.HEALTHCHECK_PATH
 import choliver.xomad.getAddress
@@ -14,7 +14,7 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import org.slf4j.event.Level
 
-object DummyGrid {
+object HelloGrid {
   @JvmStatic
   fun main(args: Array<String>) {
     val address = getAddress()
@@ -30,7 +30,7 @@ object DummyGrid {
         get(HEALTHCHECK_PATH) { call.respond(HttpStatusCode.OK) }
 
         route(getBaseRoute()) {
-          get("/") { call.respondText("Hello from ${this@DummyGrid.javaClass.simpleName}") }
+          get("/") { call.respondText("Hello from ${this@HelloGrid.javaClass.simpleName}") }
         }
       }
     }
