@@ -2,7 +2,7 @@ locals {
   version = "0.0.20"
 }
 
-job "grid-streams" {
+job "grid-hello" {
   datacenters = ["los"]
 
   type = "service"
@@ -11,7 +11,7 @@ job "grid-streams" {
     count = 1
 
     service {
-      name = "grid-streams"
+      name = "grid-hello"
       port = "http"
 
       check {
@@ -45,7 +45,7 @@ job "grid-streams" {
       }
 
       env {
-        BASE_ROUTE = "grid-streams"
+        BASE_ROUTE = "grid-hello"
       }
 
       resources {
