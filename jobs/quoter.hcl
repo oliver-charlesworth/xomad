@@ -1,5 +1,5 @@
 locals {
-  version = "0.0.18"
+  version = "0.0.19"
 }
 
 job "quoter" {
@@ -13,7 +13,7 @@ job "quoter" {
   }
 
   group "app" {
-    count = 6
+    count = 4
 
     service {
       name = "quoter"

@@ -1,12 +1,14 @@
 package choliver.xomad
 
-import choliver.xomad.CoroutineUtils.io
 import com.orbitz.consul.Consul
 import com.orbitz.consul.model.kv.Value
 import com.orbitz.consul.model.session.ImmutableSession
 import com.orbitz.consul.option.ImmutableQueryOptions
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.produce
+import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 import java.math.BigInteger
 import kotlin.concurrent.thread
@@ -33,17 +35,7 @@ object ConsulUtils {
     io { sessionClient.renewSession(mySessionId) }
   }
 
-  suspend fun handleUpdates(key: String, block: suspend (List<Value>) -> Unit) {
-    var index = BigInteger.ZERO
-    while (true) {
-      val options = ImmutableQueryOptions.builder().index(index).wait(QUERY_WAIT).build()
-      val response = io { kvClient.getConsulResponseWithValues(key, options) }
-      response.response?.run { block(this) }
-      index = response.index
-    }
-  }
-
-  fun CoroutineScope.updatesFor(key: String) = produce {
+  fun CoroutineScope.updatesFor(key: String) = produce<List<Value>> {
     var index = BigInteger.ZERO
     while (true) {
       val options = ImmutableQueryOptions.builder().index(index).wait(QUERY_WAIT).build()
@@ -56,6 +48,8 @@ object ConsulUtils {
   suspend fun acquireLock(key: String, value: String) {
     io { kvClient.acquireLock(key, value, mySessionId) }
   }
+
+  private suspend fun <R> io(block: () -> R) = withContext(Dispatchers.IO) { block() }
 
   private const val QUERY_WAIT = "5m"
   private const val SESSION_TTL = "30s"
